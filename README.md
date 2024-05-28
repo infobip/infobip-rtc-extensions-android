@@ -114,7 +114,7 @@ applicationCall.setVideoFilter(videoFilter);
 
 ### Implementing your own
 If you wish to provide your own implementation of video filters, the best starting point
-would be to extend the [`RTCVideoFilter`](https://github.com/infobip/infobip-rtc-android/wiki/ApplicationCall) 
+would be to extend the [`RTCVideoFilter`](https://github.com/infobip/infobip-rtc-android/wiki/RTCVideoFilter) 
 class and implement the abstract methods. For example, a trivial video filter which draws a red diagonal line
 would look like this: 
 ```java 
