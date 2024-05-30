@@ -29,8 +29,8 @@ dependencies {
 ## Video filters
 
 The Infobip RTC supports user-defined video filters capable of manipulating outgoing video streams during calls. The
-library provides an extensive implementation of commonly used video filters, making configuration easier and
-enabling seamless integration.
+library provides an extensive implementation of commonly used video filters, making configuration easier and enabling
+seamless integration.
 
 Currently available implementations are:
 
@@ -64,12 +64,17 @@ accepts [`VirtualBackgroundVideoFilterOptions`](https://github.com/infobip/infob
 for customization.
 
 ```java
+// Retrieve an image from a URL and decode it into a Bitmap
 URL url = new URL("https://images.unsplash.com/photo-1558882224-dda166733046");
 Bitmap image = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+
+// Create a VirtualBackgroundVideoFilterOptions object and set the virtual background image
 VirtualBackgroundVideoFilterOptions options = VirtualBackgroundVideoFilterOptions.builder()
         .mode(VideoFilterMode.VIRTUAL_BACKGROUND)
         .virtualBackground(image)
         .build();
+
+// Create the VirtualBackgroundVideoFilter object with created options
 VirtualBackgroundVideoFilter videoFilter = new VirtualBackgroundVideoFilter(options);
 ```
 
@@ -78,7 +83,10 @@ pass the new options directly to the existing video filter instance. This approa
 enhances overall efficiency.
 
 ```java
+// Create a VirtualBackgroundVideoFilterOptions object with default values
 VirtualBackgroundVideoFilterOptions options = VirtualBackgroundVideoFilterOptions.builder().build();
+
+// Set created options on existing video filter object
 videoFilter.setOptions(options);
 ``` 
 
@@ -92,9 +100,11 @@ using [`VideoOptions`](https://github.com/infobip/infobip-rtc-android/wiki/Video
 the [`ApplicationCallOptions`](https://github.com/infobip/infobip-rtc-android/wiki/ApplicationCallOptions) object:
 
 ```java
+// Obtain authentication token and get instance of InfobipRTC
 String token = obtainToken();
 InfobipRTC infobipRTC = InfobipRTC.getInstance();
 
+// Create a video application call with configured video options to use created video filter object
 CallApplicationRequest callApplicationRequest = new CallApplicationRequest(token, getApplicationContext(), "45g2gql9ay4a2blu55uk1628", new DefaultApplicationCallEventListener());
 VideoOptions videoOptions = VideoOptions.builder().videoFilter(videoFilter).build();
 ApplicationCallOptions applicationCallOptions = ApplicationCallOptions.builder().video(true).videoOptios(videoOptions).build();
@@ -106,35 +116,39 @@ existing [`ApplicationCall`](https://github.com/infobip/infobip-rtc-android/wiki
 [`setVideoFilter`](https://github.com/infobip/infobip-rtc-android/wiki/ApplicationCall#set-video-filter) method:
 
 ```java
-InfobipRTC infobipRTC = InfobipRTC.getInstance();
-ApplicationCall applicationCall = infobipRTC.getActiveApplicationCall();
-
+// Retrieve the active application call and set the video filter to created video filter
+ApplicationCall applicationCall = InfobipRTC.getInstance().getActiveApplicationCall();
 applicationCall.setVideoFilter(videoFilter);
 ```
 
 ### Implementing your own
-If you wish to provide your own implementation of video filters, the best starting point
-would be to extend the [`RTCVideoFilter`](https://github.com/infobip/infobip-rtc-android/wiki/RTCVideoFilter) 
-class and implement the abstract methods. For example, a trivial video filter which draws a red diagonal line
-would look like this: 
-```java 
+
+If you wish to provide your own implementation of video filters, the best starting point would be to extend the
+[`RTCVideoFilter`](https://github.com/infobip/infobip-rtc-android/wiki/RTCVideoFilter) class and implement the abstract
+methods. For example, a trivial video filter which draws a red diagonal line would look like this:
+
+```java
 class RedLineFilter extends RTCVideoFilter {
     @Override
     protected void applyFilter(Bitmap bitmap, int rotation, long timestampNs) {
+        // Create a copy of the bitmap to apply the filter
         Bitmap filteredFrame = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-        for (int i = 0; i < Math.min(filteredFrame.getWidth(), filteredFrame.getHeight()); ++ i) {
+
+        // Apply the red line filter diagonally from the top-left corner
+        for (int i = 0; i < Math.min(filteredFrame.getWidth(), filteredFrame.getHeight()); ++i) {
             filteredFrame.setPixel(i, i, Color.RED);
         }
 
-        // Provide the filtered frame. This call can be done from another thread in case your
-        // filter logic is asynchronous.
+        // Provide the filtered frame. This call can be done from another thread in case your filter logic is asynchronous.
         super.notifyFrameProcessed(filteredFrame, rotation, timestampNs);
     }
 
     @Override
-    protected void onStart(int width, int height, int sourceFps, Context context) {}
+    protected void onStart(int width, int height, int sourceFps, Context context) {
+    }
 
     @Override
-    protected void onStop() {}
-} 
+    protected void onStop() {
+    }
+}
 ```
