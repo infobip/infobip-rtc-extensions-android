@@ -34,33 +34,33 @@ seamless integration.
 
 Currently available implementations are:
 
-- [`VirtualBackgroundVideoFilter`](#virtual-background-video-filter)
+- [`RTCVideoFilter`](#rtc-video-filter)
 
-<a name="virtual-background-video-filter"></a>
+<a name="rtc-video-filter"></a>
 
-### VirtualBackgroundVideoFilter
+### RTCVideoFilter
 
 This filter allows users to modify their background during video calls.
 
 Supported video filter modes include:
 
 - Virtual background
-  ([`VideoFilterMode.VIRTUAL_BACKGROUND`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/VideoFilterMode#virtual-background)) -
+  ([`RTCVideoFilterMode.VIRTUAL_BACKGROUND`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/RTCVideoFilterMode#virtual-background)) -
   Users can set a custom image to be displayed as their background
 - Background blur
-  ([`VideoFilterMode.BACKGROUND_BLUR`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/VideoFilterMode#background-blur)) -
+  ([`RTCVideoFilterMode.BACKGROUND_BLUR`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/RTCVideoFilterMode#background-blur)) -
   Users can blur their background.
 - Face Track
-  ([`VideoFilterMode.FACE_TRACK`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/VideoFilterMode#face-track)) -
+  ([`RTCVideoFilterMode.FACE_TRACK`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/RTCVideoFilterMode#face-track)) -
   Automatically adjusts the video to keep the user's face centered and properly framed within the view.
-- None ([`VideoFilterMode.NONE`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/VideoFilterMode#none)) -
+- None ([`RTCVideoFilterMode.NONE`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/RTCVideoFilterMode#none)) -
   No video filtering is applied; video frames are passed through unchanged. This option is recommended over repeatedly
   reallocating video filter resources to avoid visible disruptions.
 
 To utilize this feature, begin by creating an instance of
-the [`VirtualBackgroundVideoFilter`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/VirtualBackgroundVideoFilter)
+the [`RTCVideoFilter`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/RTCVideoFilter)
 object. The constructor
-accepts [`VirtualBackgroundVideoFilterOptions`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/VirtualBackgroundVideoFilterOptions)
+accepts [`RTCVideoFilterOptions`](https://github.com/infobip/infobip-rtc-extensions-android/wiki/RTCVideoFilterOptions)
 for customization.
 
 ```java
@@ -68,14 +68,14 @@ for customization.
 URL url = new URL("https://images.unsplash.com/photo-1558882224-dda166733046");
 Bitmap image = BitmapFactory.decodeStream(url.openConnection().getInputStream());
 
-// Create a VirtualBackgroundVideoFilterOptions object and set the virtual background image
-VirtualBackgroundVideoFilterOptions options = VirtualBackgroundVideoFilterOptions.builder()
-        .mode(VideoFilterMode.VIRTUAL_BACKGROUND)
+// Create a RTCVideoFilterOptions object and set the virtual background image
+RTCVideoFilterOptions options = RTCVideoFilterOptions.builder()
+        .mode(RTCVideoFilterMode.VIRTUAL_BACKGROUND)
         .virtualBackground(image)
         .build();
 
-// Create the VirtualBackgroundVideoFilter object with created options
-VirtualBackgroundVideoFilter videoFilter = new VirtualBackgroundVideoFilter(options);
+// Create the RTCVideoFilter object with created options
+RTCVideoFilter videoFilter = new RTCVideoFilter(options);
 ```
 
 For optimal performance, it's recommended to avoid reallocating video filter instances solely for mode changes. Instead,
@@ -83,8 +83,8 @@ pass the new options directly to the existing video filter instance. This approa
 enhances overall efficiency.
 
 ```java
-// Create a VirtualBackgroundVideoFilterOptions object with default values
-VirtualBackgroundVideoFilterOptions options = VirtualBackgroundVideoFilterOptions.builder().build();
+// Create a RTCVideoFilterOptions object with default values
+RTCVideoFilterOptions options = RTCVideoFilterOptions.builder().build();
 
 // Set created options on existing video filter object
 videoFilter.setOptions(options);
@@ -123,15 +123,17 @@ applicationCall.setVideoFilter(videoFilter);
 
 ### Implementing your own
 
-If you wish to provide your own implementation of video filters, the best starting point would be to extend the
-[`RTCVideoFilter`](https://github.com/infobip/infobip-rtc-android/wiki/RTCVideoFilter) class and implement the abstract
-methods. For example, a trivial video filter which draws a red diagonal line would look like this:
+If you wish to provide your own implementation of video filters, you need to implement the
+[`VideoFilter`](https://github.com/infobip/infobip-rtc-android/wiki/VideoFilter) interface. 
+For example, a trivial video filter which draws a red diagonal line would look like this:
 
 ```java
-class RedLineFilter extends RTCVideoFilter {
+class RedLineFilter implements VideoFilter {
+    private VideoFilterManager videoFilterManager; 
+    
     @Override
-    protected void applyFilter(Bitmap bitmap, int rotation, long timestampNs) {
-        // Create a copy of the bitmap to apply the filter
+    public void applyFilter(Bitmap bitmap, int rotation, long timestampNs) {
+        // Create a mutable copy of the bitmap to apply the filter
         Bitmap filteredFrame = bitmap.copy(Bitmap.Config.ARGB_8888, true);
 
         // Apply the red line filter diagonally from the top-left corner
@@ -139,16 +141,19 @@ class RedLineFilter extends RTCVideoFilter {
             filteredFrame.setPixel(i, i, Color.RED);
         }
 
-        // Provide the filtered frame. This call can be done from another thread in case your filter logic is asynchronous.
-        super.notifyFrameProcessed(filteredFrame, rotation, timestampNs);
+        // Provide the filtered frame. This call can be done from another thread in case your
+        // filter logic is asynchronous, but keep in mind that in that case the source bitmap
+        // has to be copied if it's going to be read after `applyFilter` returns!
+        videoFilterManager.notifyFrameProcessed(filteredFrame, rotation, timestampNs);
     }
 
     @Override
-    protected void onStart(int width, int height, int sourceFps, Context context) {
+    public void start(int width, int height, int sourceFps, Context context, VideoFilterManager videoFilterManager) throws VideoFilterException {
+      this.videoFilterManager = videoFilterManager;
     }
 
     @Override
-    protected void onStop() {
+    public void stop() {
     }
 }
 ```
